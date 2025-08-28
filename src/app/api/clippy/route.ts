@@ -1,3 +1,5 @@
+import { ClippyCliMessage } from "@/lib/types/clippy-cli/clippy-cli-message";
+
 // Store for active SSE connections
 const connections = new Set<ReadableStreamDefaultController<Uint8Array>>();
 
@@ -5,21 +7,24 @@ const connections = new Set<ReadableStreamDefaultController<Uint8Array>>();
 export async function POST(request: Request) {
   console.log("Received POST request: ", request);
   try {
-    const { text, type } = await request.json();
+    const messageData: ClippyCliMessage = await request.json();
 
-    if (!text) {
-      return new Response(JSON.stringify({ error: "Text is required" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+    // Validate that required fields are present based on message type
+    if (!messageData.text && messageData.type !== "clear") {
+      return new Response(
+        JSON.stringify({ error: "Text is required for non-clear messages" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
-    // Broadcast text to all connected SSE clients
+    // Broadcast the complete message to all connected SSE clients
     const encoder = new TextEncoder();
     const data = `data: ${JSON.stringify({
-      text,
-      type,
-      timestamp: Date.now(),
+      ...messageData,
+      timestamp: messageData.timestamp ?? Date.now(), // Ensure timestamp is always present
     })}\n\n`;
 
     connections.forEach((controller) => {
@@ -54,13 +59,13 @@ export async function GET() {
       // Add this connection to our set
       connections.add(controller);
 
-      // Send initial connection message
-      const initialData = `data: ${JSON.stringify({
-        text: "Connected to Clippy stream...",
+      // Send a lightweight connection confirmation message
+      // This ensures the browser recognizes the connection as established
+      const connectionConfirm = `data: ${JSON.stringify({
+        type: "connection-established",
         timestamp: Date.now(),
-        type: "connection",
       })}\n\n`;
-      controller.enqueue(encoder.encode(initialData));
+      controller.enqueue(encoder.encode(connectionConfirm));
 
       // Note: In a real application, you'd want to handle connection cleanup better
       // This is a simplified version for local experimentation
