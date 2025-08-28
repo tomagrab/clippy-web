@@ -1,8 +1,11 @@
 "use client";
 
-import TextStreamCard from "@/components/modules/text-stream/text-stream-card";
+import UnifiedChat from "@/components/modules/unified-chat/unified-chat";
 import { ConnectionStatus } from "@/lib/types/text-stream/status/connection-status";
-import { WebStreamMessage } from "@/lib/types/clippy-cli/clippy-cli-message";
+import {
+  WebStreamMessage,
+  ClippyCliMessage,
+} from "@/lib/types/clippy-cli/clippy-cli-message";
 import { useEffect, useState } from "react";
 
 export default function Home() {
@@ -29,8 +32,8 @@ export default function Home() {
           return; // Don't add this to messages
         }
 
-        // Only process messages that have actual text content
-        if (!data.text && data.type !== "typing") {
+        // Only process messages that have actual text content or are typing/clear indicators
+        if (!data.text && data.type !== "typing" && data.type !== "clear") {
           return;
         }
 
@@ -95,13 +98,20 @@ export default function Home() {
     setMessages([]);
   };
 
+  const handleMessageSent = (message: ClippyCliMessage) => {
+    console.log("📤 Message sent to CLI:", message);
+  };
+
   return (
-    <div className="border rounded-lg shadow-sm">
-      <TextStreamCard
-        connectionStatus={connectionStatus}
-        messages={messages}
-        onClearMessages={clearMessages}
-      />
+    <div className="container mx-auto p-6">
+      <div className="max-w-4xl mx-auto">
+        <UnifiedChat
+          connectionStatus={connectionStatus}
+          incomingMessages={messages}
+          onClearMessages={clearMessages}
+          onMessageSent={handleMessageSent}
+        />
+      </div>
     </div>
   );
 }

@@ -10,9 +10,10 @@ export async function POST(request: Request) {
     const messageData: ClippyCliMessage = await request.json();
 
     // Validate that required fields are present based on message type
-    if (!messageData.text && messageData.type !== "clear") {
+    // Allow typing and clear messages without text content
+    if (!messageData.text && messageData.type !== "clear" && messageData.type !== "typing") {
       return new Response(
-        JSON.stringify({ error: "Text is required for non-clear messages" }),
+        JSON.stringify({ error: "Text is required for non-clear/non-typing messages" }),
         {
           status: 400,
           headers: { "Content-Type": "application/json" },
